@@ -1,4 +1,7 @@
-# ManyLLM - iOS & iPadOS App 🐱🐝
+# ManyLLM - iOS & iPadOS App 
+
+<img width="1021" height="517" alt="image" src="https://github.com/user-attachments/assets/1c802344-d250-4cf1-8439-9cabe001e8f8" />
+
 
 **ManyLLM** es una aplicación nativa para iPhone e iPad desarrollada en SwiftUI que permite ejecutar y conectar modelos de lenguaje (LLMs) tanto de manera local (vía Ollama) como remota (OpenAI, Anthropic, HuggingFace), inspirada en la interfaz y experiencia de usuario de la app oficial de Claude para iOS.
 
