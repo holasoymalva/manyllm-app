@@ -107,7 +107,8 @@ public final class WorkspaceStore: ObservableObject {
                 parameters: parameters,
                 ollamaHost: ollamaHost,
                 openAIKey: openAIKey,
-                anthropicKey: anthropicKey
+                anthropicKey: anthropicKey,
+                huggingFaceToken: huggingFaceToken
             )
             
             do {
