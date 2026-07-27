@@ -10,6 +10,8 @@ public struct ManyLLMDrawerSidebarView: View {
     @Binding var isDrawerOpen: Bool
     @State private var showingNewWorkspaceAlert = false
     @State private var newWorkspaceName = ""
+    @State private var showingComingSoonAlert = false
+    @State private var comingSoonFeatureName = ""
     
     public init(store: WorkspaceStore, isDrawerOpen: Binding<Bool>) {
         self.store = store
@@ -59,10 +61,31 @@ public struct ManyLLMDrawerSidebarView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // Category Links
                     VStack(alignment: .leading, spacing: 14) {
-                        DrawerCategoryRow(icon: "bubble.left.and.bubble.right", title: "Chats")
-                        DrawerCategoryRow(icon: "folder", title: "Proyectos")
-                        DrawerCategoryRow(icon: "square.stack.3d.up", title: "Artefactos")
-                        DrawerCategoryRow(icon: "chevron.left.forward.slash.chevron.right", title: "Código")
+                        Button(action: {
+                            withAnimation { isDrawerOpen = false }
+                        }) {
+                            DrawerCategoryRow(icon: "bubble.left.and.bubble.right", title: "Chats", isAvailable: true)
+                        }
+                        
+                        Button(action: {
+                            withAnimation { isDrawerOpen = false }
+                        }) {
+                            DrawerCategoryRow(icon: "folder", title: "Workspaces & Proyectos", isAvailable: true)
+                        }
+                        
+                        Button(action: {
+                            comingSoonFeatureName = "Visor e Inspector de Artefactos"
+                            showingComingSoonAlert = true
+                        }) {
+                            DrawerCategoryRow(icon: "square.stack.3d.up", title: "Artefactos", isAvailable: false)
+                        }
+                        
+                        Button(action: {
+                            comingSoonFeatureName = "Entorno de Ejecución de Código Sandbox"
+                            showingComingSoonAlert = true
+                        }) {
+                            DrawerCategoryRow(icon: "chevron.left.forward.slash.chevron.right", title: "Código & Sandbox", isAvailable: false)
+                        }
                     }
                     .padding(.horizontal, 20)
                     
@@ -192,7 +215,7 @@ public struct ManyLLMDrawerSidebarView: View {
                 
                 // + Nuevo Chat Pill Button
                 Button(action: {
-                    store.chatMessages.removeAll()
+                    store.clearChatHistory()
                     store.inputPrompt = ""
                     withAnimation { isDrawerOpen = false }
                 }) {
@@ -222,12 +245,18 @@ public struct ManyLLMDrawerSidebarView: View {
                 store.addWorkspace(name: newWorkspaceName)
             }
         }
+        .alert("Próximamente en v1.1", isPresented: $showingComingSoonAlert) {
+            Button("Entendido", role: .cancel) { }
+        } message: {
+            Text("La funcionalidad '\(comingSoonFeatureName)' está programada para la siguiente actualización. El chat y la ejecución de modelos LLM están 100% operativos.")
+        }
     }
 }
 
 struct DrawerCategoryRow: View {
     let icon: String
     let title: String
+    var isAvailable: Bool = true
     
     var body: some View {
         HStack(spacing: 14) {
@@ -241,7 +270,17 @@ struct DrawerCategoryRow: View {
                 .foregroundColor(.primary)
             
             Spacer()
+            
+            if !isAvailable {
+                Text("Próximamente")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.orange.opacity(0.15))
+                    .foregroundColor(.orange)
+                    .cornerRadius(4)
+            }
         }
     }
 }
-

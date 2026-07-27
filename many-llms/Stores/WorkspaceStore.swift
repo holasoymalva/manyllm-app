@@ -22,33 +22,88 @@ public final class WorkspaceStore: ObservableObject {
     @Published public var isGenerating: Bool = false
     @Published public var systemPromptExpanded: Bool = false
     
-    // Settings
-    @Published public var ollamaHost: String = "http://localhost:11434"
-    @Published public var openAIKey: String = ""
-    @Published public var anthropicKey: String = ""
-    @Published public var huggingFaceToken: String = ""
+    // Settings (Persisted via StorageService)
+    @Published public var ollamaHost: String {
+        didSet { StorageService.shared.ollamaHost = ollamaHost }
+    }
+    @Published public var openAIKey: String {
+        didSet { StorageService.shared.openAIKey = openAIKey }
+    }
+    @Published public var anthropicKey: String {
+        didSet { StorageService.shared.anthropicKey = anthropicKey }
+    }
+    @Published public var huggingFaceToken: String {
+        didSet { StorageService.shared.huggingFaceToken = huggingFaceToken }
+    }
+    @Published public var customEndpoint: String {
+        didSet { StorageService.shared.customEndpoint = customEndpoint }
+    }
     @Published public var isSettingsPresented: Bool = false
     
+    // Ollama Connection Status
+    @Published public var ollamaStatusMessage: String = "No comprobado"
+    @Published public var isOllamaConnected: Bool = false
+    @Published public var isTestingConnection: Bool = false
+    
     public init() {
+        let storage = StorageService.shared
+        
+        let initialOllamaHost = storage.ollamaHost
+        let initialOpenAIKey = storage.openAIKey
+        let initialAnthropicKey = storage.anthropicKey
+        let initialHFToken = storage.huggingFaceToken
+        let initialCustomEndpoint = storage.customEndpoint
+        
+        self.ollamaHost = initialOllamaHost
+        self.openAIKey = initialOpenAIKey
+        self.anthropicKey = initialAnthropicKey
+        self.huggingFaceToken = initialHFToken
+        self.customEndpoint = initialCustomEndpoint
+        
+        self.parameters = LLMParameters(
+            temperature: storage.temperature,
+            maxTokens: storage.maxTokens,
+            systemPrompt: storage.systemPrompt
+        )
+        
         let defaultModels = LLMModel.presetModels
         self.availableModels = defaultModels
-        self.selectedModel = defaultModels[0] // Llama 3 8B
-        self.parameters = LLMParameters(temperature: 0.7, maxTokens: 2000, systemPrompt: "You are a helpful assistant.")
         
-        let ws1 = Workspace(name: "Current Chat", isActive: true)
-        let ws2 = Workspace(name: "Research Project", isActive: false)
-        let ws3 = Workspace(name: "Code Review", isActive: false)
+        let savedModelId = storage.selectedModelId
+        self.selectedModel = defaultModels.first(where: { $0.id == savedModelId }) ?? defaultModels[0]
         
-        self.workspaces = [ws1, ws2, ws3]
-        self.activeWorkspaceId = ws1.id
+        // Load persistent Workspaces
+        if let savedWorkspaces = storage.loadWorkspaces(), !savedWorkspaces.isEmpty {
+            self.workspaces = savedWorkspaces
+            self.activeWorkspaceId = savedWorkspaces.first(where: { $0.isActive })?.id ?? savedWorkspaces[0].id
+        } else {
+            let ws1 = Workspace(name: "Current Chat", isActive: true)
+            let ws2 = Workspace(name: "Research Project", isActive: false)
+            let ws3 = Workspace(name: "Code Review", isActive: false)
+            self.workspaces = [ws1, ws2, ws3]
+            self.activeWorkspaceId = ws1.id
+            storage.saveWorkspaces(self.workspaces)
+        }
         
-        self.contextFiles = [
-            ContextFile(name: "project-notes.md", sizeText: "2.3 KB", isInContext: true, fileType: "md", content: "Notes on ManyLLM app architecture and design."),
-            ContextFile(name: "api-docs.pdf", sizeText: "156 KB", isInContext: true, fileType: "pdf", content: "API documentation endpoints for local & remote inference."),
-            ContextFile(name: "requirements.txt", sizeText: "0.8 KB", isInContext: false, fileType: "txt", content: "Dependencies: SwiftUI, Combine, URLSession.")
-        ]
+        // Load persistent Context Files
+        if let savedFiles = storage.loadContextFiles(), !savedFiles.isEmpty {
+            self.contextFiles = savedFiles
+        } else {
+            self.contextFiles = [
+                ContextFile(name: "project-notes.md", sizeText: "2.3 KB", isInContext: true, fileType: "md", content: "Notes on ManyLLM app architecture and design."),
+                ContextFile(name: "api-docs.pdf", sizeText: "156 KB", isInContext: true, fileType: "pdf", content: "API documentation endpoints for local & remote inference."),
+                ContextFile(name: "requirements.txt", sizeText: "0.8 KB", isInContext: false, fileType: "txt", content: "Dependencies: SwiftUI, Combine, URLSession.")
+            ]
+            storage.saveContextFiles(self.contextFiles)
+        }
         
-        self.chatMessages = []
+        // Load persistent Chat Messages
+        self.chatMessages = storage.loadChatMessages()
+        
+        // Initial Ollama Auto-Discovery
+        Task {
+            await checkOllamaConnection()
+        }
     }
     
     public var activeFilesCountText: String {
@@ -62,11 +117,27 @@ public final class WorkspaceStore: ObservableObject {
         return trimmed.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.count
     }
     
+    public func updateParameters(temp: Double, maxTok: Int, prompt: String) {
+        parameters.temperature = temp
+        parameters.maxTokens = maxTok
+        parameters.systemPrompt = prompt
+        
+        StorageService.shared.temperature = temp
+        StorageService.shared.maxTokens = maxTok
+        StorageService.shared.systemPrompt = prompt
+    }
+    
+    public func selectModel(_ model: LLMModel) {
+        selectedModel = model
+        StorageService.shared.selectedModelId = model.id
+    }
+    
     public func selectWorkspace(_ workspace: Workspace) {
         for index in workspaces.indices {
             workspaces[index].isActive = (workspaces[index].id == workspace.id)
         }
         activeWorkspaceId = workspace.id
+        StorageService.shared.saveWorkspaces(workspaces)
     }
     
     public func addWorkspace(name: String) {
@@ -76,12 +147,44 @@ public final class WorkspaceStore: ObservableObject {
         }
         workspaces.append(newWs)
         activeWorkspaceId = newWs.id
+        StorageService.shared.saveWorkspaces(workspaces)
     }
     
     public func toggleContextFile(_ file: ContextFile) {
         if let index = contextFiles.firstIndex(where: { $0.id == file.id }) {
             contextFiles[index].isInContext.toggle()
+            StorageService.shared.saveContextFiles(contextFiles)
         }
+    }
+    
+    public func addCustomContextFile(name: String, content: String) {
+        let sizeText = "\(Double(content.count) / 1024.0 < 0.1 ? 0.1 : Double(content.count) / 1024.0) KB"
+        let newFile = ContextFile(name: name, sizeText: sizeText, isInContext: true, fileType: "txt", content: content)
+        contextFiles.append(newFile)
+        StorageService.shared.saveContextFiles(contextFiles)
+    }
+    
+    public func checkOllamaConnection() async {
+        isTestingConnection = true
+        let (isSuccess, message, _) = await LLMService.shared.testOllamaConnection(host: ollamaHost)
+        isOllamaConnected = isSuccess
+        ollamaStatusMessage = message
+        
+        if isSuccess {
+            if let realOllamaModels = try? await LLMService.shared.fetchOllamaModels(host: ollamaHost), !realOllamaModels.isEmpty {
+                // Merge discovered Ollama models with preset models
+                var combined = availableModels.filter { $0.provider != .ollama }
+                combined.insert(contentsOf: realOllamaModels, at: 0)
+                availableModels = combined
+                
+                if selectedModel.provider == .ollama {
+                    if let updated = realOllamaModels.first(where: { $0.id == selectedModel.id }) ?? realOllamaModels.first {
+                        selectedModel = updated
+                    }
+                }
+            }
+        }
+        isTestingConnection = false
     }
     
     public func sendMessage() {
@@ -90,6 +193,7 @@ public final class WorkspaceStore: ObservableObject {
         
         let userMessage = ChatMessage(role: .user, content: promptText)
         chatMessages.append(userMessage)
+        StorageService.shared.saveChatMessages(chatMessages)
         
         inputPrompt = ""
         isGenerating = true
@@ -108,7 +212,8 @@ public final class WorkspaceStore: ObservableObject {
                 ollamaHost: ollamaHost,
                 openAIKey: openAIKey,
                 anthropicKey: anthropicKey,
-                huggingFaceToken: huggingFaceToken
+                huggingFaceToken: huggingFaceToken,
+                customEndpoint: customEndpoint
             )
             
             do {
@@ -122,7 +227,13 @@ public final class WorkspaceStore: ObservableObject {
                     chatMessages[index].content += "\n[Error: \(error.localizedDescription)]"
                 }
             }
+            StorageService.shared.saveChatMessages(chatMessages)
             isGenerating = false
         }
+    }
+    
+    public func clearChatHistory() {
+        chatMessages.removeAll()
+        StorageService.shared.saveChatMessages([])
     }
 }

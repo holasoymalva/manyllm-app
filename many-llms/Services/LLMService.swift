@@ -10,7 +10,60 @@ public final class LLMService {
     
     private init() {}
     
-    /// Stream responses from Ollama, OpenAI, Anthropic, HuggingFace or Local engine
+    // MARK: - Auto-Discovery & Connection Test for Ollama
+    public func fetchOllamaModels(host: String) async throws -> [LLMModel] {
+        let cleanHost = host.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "/$", with: "", options: .regularExpression)
+        let hostURLString = cleanHost.isEmpty ? "http://localhost:11434" : cleanHost
+        
+        guard let url = URL(string: "\(hostURLString)/api/tags") else {
+            throw URLError(.badURL)
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 4.0
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let modelsList = json["models"] as? [[String: Any]] else {
+            return []
+        }
+        
+        var discoveredModels: [LLMModel] = []
+        for item in modelsList {
+            if let name = item["name"] as? String {
+                let displayName = name.capitalized.replacingOccurrences(of: ":latest", with: "")
+                let modelObj = LLMModel(
+                    id: name,
+                    name: displayName,
+                    provider: .ollama,
+                    engineLabel: "Ollama Local",
+                    isLocal: true,
+                    description: "Modelo Ollama detectado en tu servidor (\(name))"
+                )
+                discoveredModels.append(modelObj)
+            }
+        }
+        
+        return discoveredModels
+    }
+    
+    public func testOllamaConnection(host: String) async -> (isSuccess: Bool, message: String, modelsCount: Int) {
+        let startTime = Date()
+        do {
+            let models = try await fetchOllamaModels(host: host)
+            let latencyMs = Int(Date().timeIntervalSince(startTime) * 1000)
+            return (true, "Conectado (\(latencyMs)ms) • \(models.count) modelo(s) disponible(s)", models.count)
+        } catch {
+            return (false, "Sin conexión: Verifique URL y que Ollama ejecute `OLLAMA_HOST=0.0.0.0 ollama serve`", 0)
+        }
+    }
+    
+    // MARK: - Streaming Completion Engine
     public func streamCompletion(
         model: LLMModel,
         prompt: String,
@@ -20,7 +73,8 @@ public final class LLMService {
         ollamaHost: String,
         openAIKey: String,
         anthropicKey: String,
-        huggingFaceToken: String = ""
+        huggingFaceToken: String = "",
+        customEndpoint: String = ""
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task {
@@ -30,7 +84,7 @@ public final class LLMService {
                         try await streamOllama(model: model, prompt: prompt, messages: messages, contextFiles: contextFiles, parameters: parameters, host: ollamaHost, continuation: continuation)
                     case .openAI:
                         if !openAIKey.isEmpty {
-                            try await streamOpenAI(model: model, prompt: prompt, messages: messages, contextFiles: contextFiles, parameters: parameters, apiKey: openAIKey, continuation: continuation)
+                            try await streamOpenAI(model: model, prompt: prompt, messages: messages, contextFiles: contextFiles, parameters: parameters, apiKey: openAIKey, customHost: customEndpoint, continuation: continuation)
                         } else {
                             try await streamApiKeyRequired(providerName: "OpenAI", continuation: continuation)
                         }
@@ -47,7 +101,11 @@ public final class LLMService {
                             try await streamApiKeyRequired(providerName: "Hugging Face", continuation: continuation)
                         }
                     case .llamaCpp, .mlx:
-                        try await streamSimulated(model: model, prompt: prompt, contextFiles: contextFiles, continuation: continuation)
+                        if !customEndpoint.isEmpty {
+                            try await streamOpenAI(model: model, prompt: prompt, messages: messages, contextFiles: contextFiles, parameters: parameters, apiKey: "local", customHost: customEndpoint, continuation: continuation)
+                        } else {
+                            try await streamSimulated(model: model, prompt: prompt, contextFiles: contextFiles, continuation: continuation)
+                        }
                     }
                 } catch {
                     if model.provider == .ollama {
@@ -80,7 +138,7 @@ public final class LLMService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 10
+        request.timeoutInterval = 20
         
         var reqMessages: [[String: String]] = []
         if !parameters.systemPrompt.isEmpty {
@@ -126,7 +184,7 @@ public final class LLMService {
         continuation.finish()
     }
     
-    // MARK: - OpenAI Stream
+    // MARK: - OpenAI / OpenAI-Compatible Stream
     private func streamOpenAI(
         model: LLMModel,
         prompt: String,
@@ -134,16 +192,20 @@ public final class LLMService {
         contextFiles: [ContextFile],
         parameters: LLMParameters,
         apiKey: String,
+        customHost: String = "",
         continuation: AsyncThrowingStream<String, Error>.Continuation
     ) async throws {
-        guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
+        let baseURL = customHost.isEmpty ? "https://api.openai.com/v1/chat/completions" : (customHost.hasSuffix("/chat/completions") ? customHost : "\(customHost)/chat/completions")
+        guard let url = URL(string: baseURL) else {
             throw URLError(.badURL)
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        if !apiKey.isEmpty {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
         
         var reqMessages: [[String: String]] = []
         if !parameters.systemPrompt.isEmpty {
@@ -277,7 +339,7 @@ public final class LLMService {
         continuation.finish()
     }
     
-    // MARK: - Helpful Status Messages
+    // MARK: - Status & Error Banners
     private func streamApiKeyRequired(
         providerName: String,
         continuation: AsyncThrowingStream<String, Error>.Continuation
@@ -295,16 +357,16 @@ public final class LLMService {
         let text = """
         ⚠️ **No se pudo conectar al servidor Ollama** (\(targetHost)).
         
-        Para conectar la app a tu servidor local de Ollama:
-        1. Asegúrate de tener **Ollama** ejecutándose en tu Mac o equipo de red local (`ollama serve`).
-        2. Si ejecutas en un simulador o dispositivo físico en Wi-Fi, configura la IP de tu Mac en **Configuración** (ej. `http://192.168.1.50:11434`).
-        3. En tu Mac, permite conexiones externas iniciando Ollama con: `OLLAMA_HOST=0.0.0.0 ollama serve`.
+        Para conectar la app a tu servidor de Ollama:
+        1. Asegúrate de tener **Ollama** ejecutándose en tu Mac o equipo (`ollama serve`).
+        2. En un iPhone/iPad o simulador, ingresa la IP de tu Mac en **Configuración** (ej. `http://192.168.1.50:11434`).
+        3. Permite conexiones externas en Ollama iniciando con: `OLLAMA_HOST=0.0.0.0 ollama serve`.
         """
         continuation.yield(text)
         continuation.finish()
     }
     
-    // MARK: - Simulated Response (Offline Demo Mode)
+    // MARK: - Simulated Local Model Response (Offline Mode)
     private func streamSimulated(
         model: LLMModel,
         prompt: String,
@@ -315,44 +377,17 @@ public final class LLMService {
         let responseText = """
         ¡Hola! Soy **\(model.name)** (\(model.engineLabel)).
         
-        Para ayudarte a construir tu **API en Python**, la mejor alternativa moderna es usar **FastAPI** junto con **Uvicorn**.
+        Procesé tu consulta: "\(prompt)".
+        
+        **Contexto activo**: \(activeFiles.count) archivo(s) incluidos.
 
-        Aquí tienes la guía de implementación paso a paso:
-
-        ### 1. Instalación de dependencias
-        ```bash
-        pip install fastapi uvicorn pydantic
+        ```swift
+        // Servidor local ManyLLM listo
+        let status = "Modelo \(model.name) ejecutado"
+        print(status)
         ```
-
-        ### 2. Estructura básica de la API (`main.py`)
-        ```python
-        from fastapi import FastAPI
-        from pydantic import BaseModel
-
-        app = FastAPI(title="ManyLLM API", version="1.0.0")
-
-        class Item(BaseModel):
-            name: str
-            description: str | None = None
-            price: float
-
-        @app.get("/")
-        def read_root():
-            return {"message": "¡API en Python ejecutándose correctamente!"}
-
-        @app.post("/items/")
-        def create_item(item: Item):
-            return {"status": "created", "item": item}
-        ```
-
-        ### 3. Ejecutar el servidor de desarrollo
-        ```bash
-        uvicorn main:app --reload --host 0.0.0.0 --port 8000
-        ```
-
-        Abre tu navegador en `http://localhost:8000/docs` para ver la documentación interactiva Swagger generada automáticamente.
-
-        *(Nota: Si deseas conectar modelos en tiempo real con Ollama o APIs de la nube, configura tu Host/API Keys en el menú de Configuración).*
+        
+        *(Nota: Si deseas conectar un servidor Ollama real o una API Key de la nube, configura la URL o llaves en el menú de Configuración).*
         """
         
         let words = responseText.components(separatedBy: " ")

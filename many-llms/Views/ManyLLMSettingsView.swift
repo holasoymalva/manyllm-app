@@ -31,12 +31,12 @@ public struct ManyLLMSettingsView: View {
                 
                 ScrollView {
                     VStack(spacing: 20) {
-                        // Generic Account Card (No Personal Data!)
+                        // Generic Account Card
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Cuenta ManyLLM")
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(.primary)
-                            Text("Versión MVP Local & Remota")
+                            Text("Versión 1.0 (Producción)")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -46,24 +46,9 @@ public struct ManyLLMSettingsView: View {
                         .background(Color(UIColor.secondarySystemGroupedBackground))
                         .cornerRadius(16)
                         
-                        // Promo / Features Card
-                        HStack {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 18))
-                                .foregroundColor(.blue)
-                            Text("Ejecuta modelos sin límites")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.blue)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .background(Color(UIColor.secondarySystemGroupedBackground))
-                        .cornerRadius(16)
-                        
-                        // Section: Ollama Host & Connection
+                        // Section: Ollama Host & Live Connection Test
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Servidor Ollama")
+                            Text("Servidor Ollama (Red Local)")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .padding(.leading, 8)
@@ -84,17 +69,38 @@ public struct ManyLLMSettingsView: View {
                                 Divider().padding(.leading, 14)
                                 
                                 HStack {
-                                    Text("Estado")
-                                        .font(.subheadline)
-                                    Spacer()
-                                    HStack(spacing: 6) {
-                                        Circle()
-                                            .fill(Color.green)
-                                            .frame(width: 8, height: 8)
-                                        Text("Disponible")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Estado")
+                                            .font(.subheadline)
+                                        Text(store.ollamaStatusMessage)
+                                            .font(.caption2)
+                                            .foregroundColor(store.isOllamaConnected ? .green : .red)
                                     }
+                                    Spacer()
+                                    
+                                    Button(action: {
+                                        Task {
+                                            await store.checkOllamaConnection()
+                                        }
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            if store.isTestingConnection {
+                                                ProgressView()
+                                                    .scaleEffect(0.8)
+                                            } else {
+                                                Image(systemName: "network")
+                                            }
+                                            Text("Probar Conexión")
+                                                .font(.caption)
+                                                .fontWeight(.semibold)
+                                        }
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(Color.blue.opacity(0.12))
+                                        .foregroundColor(.blue)
+                                        .cornerRadius(8)
+                                    }
+                                    .disabled(store.isTestingConnection)
                                 }
                                 .padding(14)
                             }
@@ -102,7 +108,31 @@ public struct ManyLLMSettingsView: View {
                             .cornerRadius(16)
                         }
                         
-                        // Section: API Keys
+                        // Section: Custom OpenAI-Compatible Endpoint (LM Studio, OpenRouter, vLLM)
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Servidor OpenAI-Compatible Personalizado")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 8)
+                            
+                            VStack(spacing: 0) {
+                                HStack {
+                                    Text("Base URL")
+                                        .font(.subheadline)
+                                    Spacer()
+                                    TextField("http://192.168.1.X:1234/v1", text: $store.customEndpoint)
+                                        .font(.subheadline)
+                                        .multilineTextAlignment(.trailing)
+                                        .autocapitalization(.none)
+                                        .disableAutocorrection(true)
+                                }
+                                .padding(14)
+                            }
+                            .background(Color(UIColor.secondarySystemGroupedBackground))
+                            .cornerRadius(16)
+                        }
+                        
+                        // Section: API Keys Remotas
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Claves de API Remotas")
                                 .font(.caption)
@@ -200,7 +230,7 @@ public struct ManyLLMSettingsView: View {
                         
                         // Section: Reset / Logout
                         Button(action: {
-                            store.chatMessages.removeAll()
+                            store.clearChatHistory()
                             dismiss()
                         }) {
                             HStack {
@@ -292,7 +322,6 @@ struct ThemeCardView: View {
                                 .stroke(isSelected ? Color.blue : Color.gray.opacity(0.2), lineWidth: isSelected ? 2 : 1)
                         )
                     
-                    // Inner miniature card lines
                     VStack(alignment: .leading, spacing: 4) {
                         RoundedRectangle(cornerRadius: 2)
                             .fill(theme == .dark ? Color.white.opacity(0.7) : Color.black.opacity(0.7))
@@ -312,4 +341,3 @@ struct ThemeCardView: View {
         .buttonStyle(PlainButtonStyle())
     }
 }
-
