@@ -287,3 +287,133 @@ public struct ManyLLMMainChatView: View {
         }
     }
 }
+
+// MARK: - Formatted Chat Bubble & Code Block View
+public struct ManyLLMChatBubbleView: View {
+    public let message: ChatMessage
+    
+    public init(message: ChatMessage) {
+        self.message = message
+    }
+    
+    public var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            if message.role == .user {
+                Spacer()
+                
+                Text(message.content)
+                    .font(.system(size: 15))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color.blue)
+                    .cornerRadius(20)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    if let modelName = message.modelName {
+                        Text(modelName)
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    if message.content.isEmpty {
+                        Text("Pensando...")
+                            .font(.system(size: 15))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(Color(UIColor.secondarySystemGroupedBackground))
+                            .cornerRadius(20)
+                    } else {
+                        MessageContentFormattedView(content: message.content)
+                    }
+                }
+                
+                Spacer()
+            }
+        }
+    }
+}
+
+// MARK: - Markdown & Code Block Formatter Component
+struct MessageContentFormattedView: View {
+    let content: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            let blocks = parseContentBlocks(content)
+            ForEach(0..<blocks.count, id: \.self) { idx in
+                let block = blocks[idx]
+                if block.isCode {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text(block.language.isEmpty ? "code" : block.language)
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.gray)
+                            Spacer()
+                            Button(action: {
+                                UIPasteboard.general.string = block.text
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "doc.on.doc")
+                                    Text("Copiar")
+                                }
+                                .font(.caption2)
+                                .foregroundColor(.blue)
+                            }
+                        }
+                        
+                        Text(block.text)
+                            .font(.system(size: 13, design: .monospaced))
+                            .foregroundColor(Color.green)
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(red: 24/255, green: 28/255, blue: 36/255))
+                            .cornerRadius(8)
+                    }
+                    .padding(10)
+                    .background(Color(red: 18/255, green: 20/255, blue: 26/255))
+                    .cornerRadius(12)
+                } else {
+                    Text(LocalizedStringKey(block.text))
+                        .font(.system(size: 15))
+                        .foregroundColor(.primary)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(20)
+    }
+    
+    struct ContentBlock {
+        let isCode: Bool
+        let language: String
+        let text: String
+    }
+    
+    private func parseContentBlocks(_ rawText: String) -> [ContentBlock] {
+        var blocks: [ContentBlock] = []
+        let parts = rawText.components(separatedBy: "```")
+        
+        for (index, part) in parts.enumerated() {
+            if index % 2 == 1 {
+                var lines = part.components(separatedBy: "\n")
+                let lang = lines.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                if !lines.isEmpty { lines.removeFirst() }
+                let codeText = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+                blocks.append(ContentBlock(isCode: true, language: lang, text: codeText.isEmpty ? part : codeText))
+            } else {
+                let text = part.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !text.isEmpty {
+                    blocks.append(ContentBlock(isCode: false, language: "", text: text))
+                }
+            }
+        }
+        
+        return blocks.isEmpty ? [ContentBlock(isCode: false, language: "", text: rawText)] : blocks
+    }
+}
