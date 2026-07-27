@@ -48,17 +48,11 @@ public final class WorkspaceStore: ObservableObject {
     public init() {
         let storage = StorageService.shared
         
-        let initialOllamaHost = storage.ollamaHost
-        let initialOpenAIKey = storage.openAIKey
-        let initialAnthropicKey = storage.anthropicKey
-        let initialHFToken = storage.huggingFaceToken
-        let initialCustomEndpoint = storage.customEndpoint
-        
-        self.ollamaHost = initialOllamaHost
-        self.openAIKey = initialOpenAIKey
-        self.anthropicKey = initialAnthropicKey
-        self.huggingFaceToken = initialHFToken
-        self.customEndpoint = initialCustomEndpoint
+        self.ollamaHost = storage.ollamaHost
+        self.openAIKey = storage.openAIKey
+        self.anthropicKey = storage.anthropicKey
+        self.huggingFaceToken = storage.huggingFaceToken
+        self.customEndpoint = storage.customEndpoint
         
         self.parameters = LLMParameters(
             temperature: storage.temperature,
@@ -72,7 +66,8 @@ public final class WorkspaceStore: ObservableObject {
         let savedModelId = storage.selectedModelId
         self.selectedModel = defaultModels.first(where: { $0.id == savedModelId }) ?? defaultModels[0]
         
-        // Load persistent Workspaces
+        // 1. Initialize Workspaces
+        var isNewWorkspaces = false
         if let savedWorkspaces = storage.loadWorkspaces(), !savedWorkspaces.isEmpty {
             self.workspaces = savedWorkspaces
             self.activeWorkspaceId = savedWorkspaces.first(where: { $0.isActive })?.id ?? savedWorkspaces[0].id
@@ -82,10 +77,11 @@ public final class WorkspaceStore: ObservableObject {
             let ws3 = Workspace(name: "Code Review", isActive: false)
             self.workspaces = [ws1, ws2, ws3]
             self.activeWorkspaceId = ws1.id
-            storage.saveWorkspaces(self.workspaces)
+            isNewWorkspaces = true
         }
         
-        // Load persistent Context Files
+        // 2. Initialize Context Files
+        var isNewContextFiles = false
         if let savedFiles = storage.loadContextFiles(), !savedFiles.isEmpty {
             self.contextFiles = savedFiles
         } else {
@@ -94,11 +90,19 @@ public final class WorkspaceStore: ObservableObject {
                 ContextFile(name: "api-docs.pdf", sizeText: "156 KB", isInContext: true, fileType: "pdf", content: "API documentation endpoints for local & remote inference."),
                 ContextFile(name: "requirements.txt", sizeText: "0.8 KB", isInContext: false, fileType: "txt", content: "Dependencies: SwiftUI, Combine, URLSession.")
             ]
-            storage.saveContextFiles(self.contextFiles)
+            isNewContextFiles = true
         }
         
-        // Load persistent Chat Messages
+        // 3. Initialize Chat Messages (All stored properties are now fully initialized!)
         self.chatMessages = storage.loadChatMessages()
+        
+        // Phase 2: Save defaults to storage if newly created
+        if isNewWorkspaces {
+            storage.saveWorkspaces(self.workspaces)
+        }
+        if isNewContextFiles {
+            storage.saveContextFiles(self.contextFiles)
+        }
         
         // Initial Ollama Auto-Discovery
         Task {
@@ -172,7 +176,6 @@ public final class WorkspaceStore: ObservableObject {
         
         if isSuccess {
             if let realOllamaModels = try? await LLMService.shared.fetchOllamaModels(host: ollamaHost), !realOllamaModels.isEmpty {
-                // Merge discovered Ollama models with preset models
                 var combined = availableModels.filter { $0.provider != .ollama }
                 combined.insert(contentsOf: realOllamaModels, at: 0)
                 availableModels = combined
