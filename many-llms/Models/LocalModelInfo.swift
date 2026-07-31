@@ -5,8 +5,9 @@
 //
 
 import Foundation
+import Combine
 
-public enum ModelDownloadState: Equatable, Codable {
+public enum ModelDownloadState: Equatable, Codable, Hashable {
     case notDownloaded
     case downloading(progress: Double, speedMBps: Double)
     case ready(filePath: String)
@@ -66,6 +67,10 @@ public struct LocalModelInfo: Identifiable, Hashable, Codable {
     public let fileSizeBytes: Int64
     public var state: ModelDownloadState
     public var description: String
+    
+    public var engineLabel: String {
+        return "Metal GPU (llama.cpp)"
+    }
     
     public init(
         id: String,

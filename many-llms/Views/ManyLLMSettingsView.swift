@@ -19,6 +19,10 @@ public struct ManyLLMSettingsView: View {
     @State private var hapticFeedbackEnabled: Bool = true
     @State private var selectedTheme: AppTheme = .light
     
+    @State private var isLocalHubPresented: Bool = false
+    @State private var isLocalServerPresented: Bool = false
+    @State private var isArenaPresented: Bool = false
+    
     public init(store: WorkspaceStore) {
         self.store = store
     }
@@ -31,12 +35,110 @@ public struct ManyLLMSettingsView: View {
                 
                 ScrollView {
                     VStack(spacing: 20) {
+                        // Section: v1.2 Dev Tools & Edge Engine
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Herramientas de Desarrollador v1.2")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 8)
+                            
+                            VStack(spacing: 0) {
+                                Button {
+                                    isLocalHubPresented = true
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "cpu.fill")
+                                            .foregroundColor(.accentColor)
+                                            .frame(width: 24)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("LM Studio Mobile Hub")
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.primary)
+                                            Text("Descarga y gestiona modelos GGUF/MLX on-device")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .padding(14)
+                                }
+                                .sheet(isPresented: $isLocalHubPresented) {
+                                    LocalModelHubView()
+                                }
+                                
+                                Divider().padding(.leading, 44)
+                                
+                                Button {
+                                    isLocalServerPresented = true
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "network")
+                                            .foregroundColor(.green)
+                                            .frame(width: 24)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Servidor REST Local (Ollama/OpenAI)")
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.primary)
+                                            Text("Transforma tu iPhone/iPad en un nodo API local")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .padding(14)
+                                }
+                                .sheet(isPresented: $isLocalServerPresented) {
+                                    LocalRESTServerView()
+                                }
+                                
+                                Divider().padding(.leading, 44)
+                                
+                                Button {
+                                    isArenaPresented = true
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "speedometer")
+                                            .foregroundColor(.purple)
+                                            .frame(width: 24)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Multi-Model Arena")
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.primary)
+                                            Text("Compara 2 modelos side-by-side con TPS y TTFT")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .padding(14)
+                                }
+                                .sheet(isPresented: $isArenaPresented) {
+                                    MultiModelArenaView()
+                                        .environmentObject(store)
+                                }
+                            }
+                            .background(Color(UIColor.secondarySystemGroupedBackground))
+                            .cornerRadius(16)
+                        }
+                        
                         // Generic Account Card
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Cuenta ManyLLM")
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(.primary)
-                            Text("Versión 1.0 (Producción)")
+                            Text("Versión 1.2 (Edge AI Node)")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }

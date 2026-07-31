@@ -76,7 +76,7 @@ public final class LLMService {
         huggingFaceToken: String = "",
         customEndpoint: String = ""
     ) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
+        AsyncThrowingStream(String.self) { continuation in
             Task {
                 do {
                     switch model.provider {
@@ -104,7 +104,20 @@ public final class LLMService {
                         if !customEndpoint.isEmpty {
                             try await streamOpenAI(model: model, prompt: prompt, messages: messages, contextFiles: contextFiles, parameters: parameters, apiKey: "local", customHost: customEndpoint, continuation: continuation)
                         } else {
-                            try await streamSimulated(model: model, prompt: prompt, contextFiles: contextFiles, continuation: continuation)
+                            // On-Device Local Inference Engine (v1.2)
+                            let localModel = LocalModelInfo.presetLocalModels.first(where: { $0.id.contains(model.id) }) ?? LocalModelInfo.presetLocalModels[0]
+                            let localStream = LocalInferenceEngine.shared.streamLocalInference(
+                                model: localModel,
+                                prompt: prompt,
+                                messages: messages,
+                                contextFiles: contextFiles,
+                                parameters: parameters
+                            ) { _ in }
+                            
+                            for try await chunk in localStream {
+                                continuation.yield(chunk)
+                            }
+                            continuation.finish()
                         }
                     }
                 } catch {
