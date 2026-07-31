@@ -38,6 +38,9 @@ public final class WorkspaceStore: ObservableObject {
     @Published public var customEndpoint: String {
         didSet { StorageService.shared.customEndpoint = customEndpoint }
     }
+    @Published public var hasConsentedToDataSharing: Bool {
+        didSet { StorageService.shared.hasConsentedToDataSharing = hasConsentedToDataSharing }
+    }
     @Published public var isSettingsPresented: Bool = false
     
     // Ollama Connection Status
@@ -53,6 +56,7 @@ public final class WorkspaceStore: ObservableObject {
         self.anthropicKey = storage.anthropicKey
         self.huggingFaceToken = storage.huggingFaceToken
         self.customEndpoint = storage.customEndpoint
+        self.hasConsentedToDataSharing = storage.hasConsentedToDataSharing
         
         self.parameters = LLMParameters(
             temperature: storage.temperature,

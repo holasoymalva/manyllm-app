@@ -24,9 +24,15 @@ public final class StorageService {
         static let temperature = "manyllm_temperature"
         static let maxTokens = "manyllm_max_tokens"
         static let systemPrompt = "manyllm_system_prompt"
+        static let hasConsentedToDataSharing = "manyllm_data_sharing_consent"
     }
     
     // MARK: - UserDefaults Properties
+    public var hasConsentedToDataSharing: Bool {
+        get { userDefaults.bool(forKey: Keys.hasConsentedToDataSharing) }
+        set { userDefaults.set(newValue, forKey: Keys.hasConsentedToDataSharing) }
+    }
+    
     public var ollamaHost: String {
         get { userDefaults.string(forKey: Keys.ollamaHost) ?? "http://localhost:11434" }
         set { userDefaults.set(newValue, forKey: Keys.ollamaHost) }

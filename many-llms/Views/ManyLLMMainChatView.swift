@@ -234,20 +234,20 @@ public struct ManyLLMMainChatView: View {
                     
                     Spacer()
                     
-                    // Microphone / Send Action Button
+                    // Send Action Button
                     Button(action: {
                         if !store.inputPrompt.isEmpty {
                             store.sendMessage()
                         }
                     }) {
-                        Image(systemName: store.inputPrompt.isEmpty ? "mic.fill" : "arrow.up")
+                        Image(systemName: "arrow.up")
                             .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(store.inputPrompt.isEmpty ? .secondary : .white)
                             .frame(width: 36, height: 36)
-                            .background(Color.black)
+                            .background(store.inputPrompt.isEmpty ? Color.gray.opacity(0.2) : Color.black)
                             .clipShape(Circle())
                     }
-                    .disabled(store.isGenerating)
+                    .disabled(store.isGenerating || store.inputPrompt.isEmpty)
                 }
                 .padding(.horizontal, 12)
                 .padding(.bottom, 10)
@@ -284,6 +284,12 @@ public struct ManyLLMMainChatView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text("El archivo '\(importedFileName)' se ha añadido exitosamente al contexto de ManyLLM.")
+        }
+        .sheet(isPresented: Binding<Bool>(
+            get: { !store.hasConsentedToDataSharing },
+            set: { _ in }
+        )) {
+            DataSharingConsentView(store: store)
         }
     }
 }
