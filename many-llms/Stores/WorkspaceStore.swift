@@ -41,6 +41,9 @@ public final class WorkspaceStore: ObservableObject {
     @Published public var hasConsentedToDataSharing: Bool {
         didSet { StorageService.shared.hasConsentedToDataSharing = hasConsentedToDataSharing }
     }
+    @Published public var appLanguage: AppLanguage {
+        didSet { StorageService.shared.appLanguage = appLanguage }
+    }
     @Published public var isSettingsPresented: Bool = false
     
     // Ollama Connection Status
@@ -57,6 +60,7 @@ public final class WorkspaceStore: ObservableObject {
         self.huggingFaceToken = storage.huggingFaceToken
         self.customEndpoint = storage.customEndpoint
         self.hasConsentedToDataSharing = storage.hasConsentedToDataSharing
+        self.appLanguage = storage.appLanguage
         
         self.parameters = LLMParameters(
             temperature: storage.temperature,
@@ -242,5 +246,9 @@ public final class WorkspaceStore: ObservableObject {
     public func clearChatHistory() {
         chatMessages.removeAll()
         StorageService.shared.saveChatMessages([])
+    }
+    
+    public func loc(_ key: String) -> String {
+        LocalizationManager.shared.localizedString(forKey: key, language: appLanguage)
     }
 }

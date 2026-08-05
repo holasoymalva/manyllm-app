@@ -25,9 +25,20 @@ public final class StorageService {
         static let maxTokens = "manyllm_max_tokens"
         static let systemPrompt = "manyllm_system_prompt"
         static let hasConsentedToDataSharing = "manyllm_data_sharing_consent"
+        static let appLanguage = "manyllm_app_language"
     }
     
     // MARK: - UserDefaults Properties
+    public var appLanguage: AppLanguage {
+        get {
+            if let raw = userDefaults.string(forKey: Keys.appLanguage), let lang = AppLanguage(rawValue: raw) {
+                return lang
+            }
+            return .system
+        }
+        set { userDefaults.set(newValue.rawValue, forKey: Keys.appLanguage) }
+    }
+    
     public var hasConsentedToDataSharing: Bool {
         get { userDefaults.bool(forKey: Keys.hasConsentedToDataSharing) }
         set { userDefaults.set(newValue, forKey: Keys.hasConsentedToDataSharing) }

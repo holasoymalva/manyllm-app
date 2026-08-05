@@ -45,7 +45,7 @@ public struct ManyLLMMainChatView: View {
                     Circle()
                         .fill(store.isOllamaConnected ? Color.green : Color.orange)
                         .frame(width: 8, height: 8)
-                    Text(store.isOllamaConnected ? "Ollama Activo" : "Red Local")
+                    Text(store.isOllamaConnected ? store.loc("status_ollama_active") : store.loc("status_local_network"))
                         .font(.caption2)
                         .fontWeight(.bold)
                         .foregroundColor(.secondary)
@@ -88,13 +88,13 @@ public struct ManyLLMMainChatView: View {
                         .foregroundColor(.orange)
                     #endif
                     
-                    Text("Bienvenido a ManyLLM")
+                    Text(store.loc("welcome_title"))
                         .font(.system(size: 24, weight: .regular, design: .serif))
                         .foregroundColor(Color(red: 35/255, green: 30/255, blue: 30/255))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
                     
-                    Text("Selecciona un modelo e ingresa tu consulta para comenzar.")
+                    Text(store.loc("welcome_subtitle"))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)

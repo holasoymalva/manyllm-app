@@ -64,27 +64,27 @@ public struct ManyLLMDrawerSidebarView: View {
                         Button(action: {
                             withAnimation { isDrawerOpen = false }
                         }) {
-                            DrawerCategoryRow(icon: "bubble.left.and.bubble.right", title: "Chats", isAvailable: true)
+                            DrawerCategoryRow(icon: "bubble.left.and.bubble.right", title: store.loc("chats"), isAvailable: true, store: store)
                         }
                         
                         Button(action: {
                             withAnimation { isDrawerOpen = false }
                         }) {
-                            DrawerCategoryRow(icon: "folder", title: "Workspaces & Proyectos", isAvailable: true)
+                            DrawerCategoryRow(icon: "folder", title: store.loc("workspaces_and_projects"), isAvailable: true, store: store)
                         }
                         
                         Button(action: {
-                            comingSoonFeatureName = "Visor e Inspector de Artefactos"
+                            comingSoonFeatureName = store.loc("artifacts")
                             showingComingSoonAlert = true
                         }) {
-                            DrawerCategoryRow(icon: "square.stack.3d.up", title: "Artefactos", isAvailable: false)
+                            DrawerCategoryRow(icon: "square.stack.3d.up", title: store.loc("artifacts"), isAvailable: false, store: store)
                         }
                         
                         Button(action: {
-                            comingSoonFeatureName = "Entorno de Ejecución de Código Sandbox"
+                            comingSoonFeatureName = store.loc("code_and_sandbox")
                             showingComingSoonAlert = true
                         }) {
-                            DrawerCategoryRow(icon: "chevron.left.forward.slash.chevron.right", title: "Código & Sandbox", isAvailable: false)
+                            DrawerCategoryRow(icon: "chevron.left.forward.slash.chevron.right", title: store.loc("code_and_sandbox"), isAvailable: false, store: store)
                         }
                     }
                     .padding(.horizontal, 20)
@@ -94,7 +94,7 @@ public struct ManyLLMDrawerSidebarView: View {
                     // Section: Workspaces
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("Workspaces")
+                            Text(store.loc("section_workspaces"))
                                 .font(.caption)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.secondary)
@@ -126,7 +126,7 @@ public struct ManyLLMDrawerSidebarView: View {
                                             .foregroundColor(.secondary)
                                         Spacer()
                                         if ws.isActive {
-                                            Text("Active")
+                                            Text(store.loc("badge_active"))
                                                 .font(.caption2)
                                                 .fontWeight(.bold)
                                                 .padding(.horizontal, 6)
@@ -150,7 +150,7 @@ public struct ManyLLMDrawerSidebarView: View {
                     
                     // Section: Archivos de Contexto
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Archivos de Contexto")
+                        Text(store.loc("section_context_files"))
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundColor(.secondary)
@@ -222,7 +222,7 @@ public struct ManyLLMDrawerSidebarView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "plus")
                             .font(.system(size: 14, weight: .bold))
-                        Text("Nuevo chat")
+                        Text(store.loc("btn_new_chat"))
                             .font(.system(size: 15, weight: .semibold))
                     }
                     .foregroundColor(.white)
@@ -240,15 +240,15 @@ public struct ManyLLMDrawerSidebarView: View {
         .background(Color(UIColor.systemBackground))
         .alert("Nuevo Workspace", isPresented: $showingNewWorkspaceAlert) {
             TextField("Nombre del Workspace", text: $newWorkspaceName)
-            Button("Cancelar", role: .cancel) { }
-            Button("Crear") {
+            Button(store.loc("cancel"), role: .cancel) { }
+            Button("OK") {
                 store.addWorkspace(name: newWorkspaceName)
             }
         }
-        .alert("Próximamente en v1.1", isPresented: $showingComingSoonAlert) {
-            Button("Entendido", role: .cancel) { }
+        .alert("Info", isPresented: $showingComingSoonAlert) {
+            Button(store.loc("ok"), role: .cancel) { }
         } message: {
-            Text("La funcionalidad '\(comingSoonFeatureName)' está programada para la siguiente actualización. El chat y la ejecución de modelos LLM están 100% operativos.")
+            Text("\(comingSoonFeatureName)")
         }
     }
 }
@@ -257,6 +257,7 @@ struct DrawerCategoryRow: View {
     let icon: String
     let title: String
     var isAvailable: Bool = true
+    var store: WorkspaceStore? = nil
     
     var body: some View {
         HStack(spacing: 14) {
@@ -272,7 +273,7 @@ struct DrawerCategoryRow: View {
             Spacer()
             
             if !isAvailable {
-                Text("Próximamente")
+                Text(store?.loc("badge_coming_soon") ?? "Próximamente")
                     .font(.caption2)
                     .fontWeight(.bold)
                     .padding(.horizontal, 6)

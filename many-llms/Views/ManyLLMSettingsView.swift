@@ -310,9 +310,43 @@ public struct ManyLLMSettingsView: View {
                             .cornerRadius(16)
                         }
                         
+                        // Section: Idioma / Language
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(store.loc("settings_language"))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 8)
+                            
+                            VStack(spacing: 0) {
+                                ForEach(AppLanguage.allCases) { lang in
+                                    Button(action: {
+                                        store.appLanguage = lang
+                                    }) {
+                                        HStack {
+                                            Text(lang.displayName)
+                                                .font(.subheadline)
+                                                .foregroundColor(.primary)
+                                            Spacer()
+                                            if store.appLanguage == lang {
+                                                Image(systemName: "checkmark")
+                                                    .foregroundColor(.blue)
+                                                    .font(.subheadline)
+                                            }
+                                        }
+                                        .padding(14)
+                                    }
+                                    if lang != AppLanguage.allCases.last {
+                                        Divider().padding(.leading, 14)
+                                    }
+                                }
+                            }
+                            .background(Color(UIColor.secondarySystemGroupedBackground))
+                            .cornerRadius(16)
+                        }
+                        
                         // Section: Aspecto
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Aspecto")
+                            Text(store.loc("settings_theme"))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .padding(.leading, 8)
@@ -368,7 +402,7 @@ public struct ManyLLMSettingsView: View {
                 }
                 
                 ToolbarItem(placement: .principal) {
-                    Text("Configuración")
+                    Text(store.loc("settings_title"))
                         .font(.system(size: 17, weight: .bold))
                 }
                 

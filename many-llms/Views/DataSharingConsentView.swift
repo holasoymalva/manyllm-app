@@ -24,7 +24,7 @@ public struct DataSharingConsentView: View {
                 .padding(.top, 40)
             
             // Title
-            Text("Uso de Datos y Privacidad")
+            Text(store.loc("privacy_title"))
                 .font(.system(size: 24, weight: .bold, design: .serif))
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
@@ -32,39 +32,39 @@ public struct DataSharingConsentView: View {
             // Explanatory ScrollView
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Para poder procesar tus consultas con inteligencia artificial, ManyLLM se conecta con servicios externos de procesamiento de lenguaje natural.")
+                    Text(store.loc("privacy_subtitle"))
                         .font(.body)
                         .foregroundColor(.primary)
                         .lineSpacing(4)
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("¿Qué información se transmite?")
+                        Text(store.loc("privacy_what_data_title"))
                             .font(.headline)
                             .foregroundColor(.primary)
                         
-                        Text("Únicamente los mensajes de chat que escribes y los archivos de contexto que selecciones explícitamente se envían al modelo de IA seleccionado para generar sus respuestas.")
+                        Text(store.loc("privacy_what_data_body"))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .lineSpacing(3)
                     }
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("¿A quién se envían tus datos?")
+                        Text(store.loc("privacy_who_data_title"))
                             .font(.headline)
                             .foregroundColor(.primary)
                         
-                        Text("Los datos se envían de forma directa al proveedor del modelo configurado (como OpenAI, Anthropic, Hugging Face o tu servidor local de Ollama). ManyLLM no cuenta con servidores intermediarios, no recopila, no almacena ni rastrea tu información en bases de datos externas.")
+                        Text(store.loc("privacy_who_data_body"))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .lineSpacing(3)
                     }
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Seguridad Local")
+                        Text(store.loc("privacy_security_title"))
                             .font(.headline)
                             .foregroundColor(.primary)
                         
-                        Text("Tus claves de API (API Keys) y configuraciones personales se almacenan de manera local y encriptada en tu dispositivo (usando Keychain e iOS UserDefaults).")
+                        Text(store.loc("privacy_security_body"))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .lineSpacing(3)
@@ -73,7 +73,7 @@ public struct DataSharingConsentView: View {
                     if let privacyURL = URL(string: "https://github.com/holasoymalva/manyllm-app/blob/main/PRIVACY.md") {
                         Link(destination: privacyURL) {
                             HStack {
-                                Text("Leer la Política de Privacidad Completa")
+                                Text(store.loc("privacy_link"))
                                     .font(.subheadline)
                                     .fontWeight(.bold)
                                 Image(systemName: "arrow.up.forward.app")
@@ -94,7 +94,7 @@ public struct DataSharingConsentView: View {
                 store.hasConsentedToDataSharing = true
                 dismiss()
             }) {
-                Text("Entiendo y Acepto")
+                Text(store.loc("privacy_accept"))
                     .font(.headline)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
