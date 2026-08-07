@@ -112,19 +112,21 @@ public struct TopToolbarView: View {
                 }
                 
                 Button(action: {
-                    // Start / Connect status toggle
+                    Task {
+                        await store.checkOllamaConnection()
+                    }
                 }) {
                     HStack(spacing: 6) {
                         Image(systemName: "play.fill")
                             .font(.caption2)
-                        Text("Start")
+                        Text(store.isOllamaConnected ? "Conectado" : "Conectar")
                             .font(.subheadline)
                             .fontWeight(.medium)
                     }
                     .foregroundColor(.white)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
-                    .background(Color.gray)
+                    .background(store.isOllamaConnected ? Color.green : Color.blue)
                     .cornerRadius(6)
                 }
             }

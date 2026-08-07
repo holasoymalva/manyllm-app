@@ -285,15 +285,6 @@ public struct ManyLLMSettingsView: View {
                                 .padding(.leading, 8)
                             
                             VStack(spacing: 0) {
-                                SettingsRowView(icon: "slider.horizontal.3", title: "Capacidades")
-                                Divider().padding(.leading, 44)
-                                SettingsRowView(icon: "square.grid.2x2", title: "Conectores")
-                                Divider().padding(.leading, 44)
-                                SettingsRowView(icon: "lock.shield", title: "Permisos")
-                                Divider().padding(.leading, 44)
-                                SettingsRowView(icon: "waveform", title: "Voz")
-                                Divider().padding(.leading, 44)
-                                
                                 HStack {
                                     Image(systemName: "iphone.radiowaves.left.and.right")
                                         .foregroundColor(.secondary)

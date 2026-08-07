@@ -72,20 +72,6 @@ public struct ManyLLMDrawerSidebarView: View {
                         }) {
                             DrawerCategoryRow(icon: "folder", title: store.loc("workspaces_and_projects"), isAvailable: true, store: store)
                         }
-                        
-                        Button(action: {
-                            comingSoonFeatureName = store.loc("artifacts")
-                            showingComingSoonAlert = true
-                        }) {
-                            DrawerCategoryRow(icon: "square.stack.3d.up", title: store.loc("artifacts"), isAvailable: false, store: store)
-                        }
-                        
-                        Button(action: {
-                            comingSoonFeatureName = store.loc("code_and_sandbox")
-                            showingComingSoonAlert = true
-                        }) {
-                            DrawerCategoryRow(icon: "chevron.left.forward.slash.chevron.right", title: store.loc("code_and_sandbox"), isAvailable: false, store: store)
-                        }
                     }
                     .padding(.horizontal, 20)
                     
