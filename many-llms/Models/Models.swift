@@ -60,14 +60,16 @@ public struct Workspace: Identifiable, Hashable, Codable {
 
 public struct ContextFile: Identifiable, Hashable, Codable {
     public let id: UUID
+    public var workspaceId: UUID?
     public var name: String
     public var sizeText: String
     public var isInContext: Bool
     public var fileType: String
     public var content: String
     
-    public init(id: UUID = UUID(), name: String, sizeText: String, isInContext: Bool = true, fileType: String = "md", content: String = "") {
+    public init(id: UUID = UUID(), workspaceId: UUID? = nil, name: String, sizeText: String, isInContext: Bool = true, fileType: String = "md", content: String = "") {
         self.id = id
+        self.workspaceId = workspaceId
         self.name = name
         self.sizeText = sizeText
         self.isInContext = isInContext
@@ -84,13 +86,15 @@ public enum MessageRole: String, Codable {
 
 public struct ChatMessage: Identifiable, Hashable, Codable {
     public let id: UUID
+    public var workspaceId: UUID?
     public let role: MessageRole
     public var content: String
     public let timestamp: Date
     public let modelName: String?
     
-    public init(id: UUID = UUID(), role: MessageRole, content: String, timestamp: Date = Date(), modelName: String? = nil) {
+    public init(id: UUID = UUID(), workspaceId: UUID? = nil, role: MessageRole, content: String, timestamp: Date = Date(), modelName: String? = nil) {
         self.id = id
+        self.workspaceId = workspaceId
         self.role = role
         self.content = content
         self.timestamp = timestamp

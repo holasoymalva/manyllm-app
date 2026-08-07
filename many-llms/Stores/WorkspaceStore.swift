@@ -15,8 +15,26 @@ public final class WorkspaceStore: ObservableObject {
     @Published public var workspaces: [Workspace]
     @Published public var activeWorkspaceId: UUID
     
-    @Published public var contextFiles: [ContextFile]
-    @Published public var chatMessages: [ChatMessage]
+    @Published public var allContextFiles: [ContextFile]
+    @Published public var allChatMessages: [ChatMessage]
+    
+    public var chatMessages: [ChatMessage] {
+        allChatMessages.filter { msg in
+            if let wId = msg.workspaceId {
+                return wId == activeWorkspaceId
+            }
+            return activeWorkspaceId == (workspaces.first?.id ?? activeWorkspaceId)
+        }
+    }
+    
+    public var contextFiles: [ContextFile] {
+        allContextFiles.filter { file in
+            if let wId = file.workspaceId {
+                return wId == activeWorkspaceId
+            }
+            return activeWorkspaceId == (workspaces.first?.id ?? activeWorkspaceId)
+        }
+    }
     
     @Published public var inputPrompt: String = ""
     @Published public var isGenerating: Bool = false
@@ -91,25 +109,26 @@ public final class WorkspaceStore: ObservableObject {
         // 2. Initialize Context Files
         var isNewContextFiles = false
         if let savedFiles = storage.loadContextFiles(), !savedFiles.isEmpty {
-            self.contextFiles = savedFiles
+            self.allContextFiles = savedFiles
         } else {
-            self.contextFiles = [
-                ContextFile(name: "project-notes.md", sizeText: "2.3 KB", isInContext: true, fileType: "md", content: "Notes on ManyLLM app architecture and design."),
-                ContextFile(name: "api-docs.pdf", sizeText: "156 KB", isInContext: true, fileType: "pdf", content: "API documentation endpoints for local & remote inference."),
-                ContextFile(name: "requirements.txt", sizeText: "0.8 KB", isInContext: false, fileType: "txt", content: "Dependencies: SwiftUI, Combine, URLSession.")
+            let defaultWsId = self.activeWorkspaceId
+            self.allContextFiles = [
+                ContextFile(workspaceId: defaultWsId, name: "project-notes.md", sizeText: "2.3 KB", isInContext: true, fileType: "md", content: "Notes on ManyLLM app architecture and design."),
+                ContextFile(workspaceId: defaultWsId, name: "api-docs.pdf", sizeText: "156 KB", isInContext: true, fileType: "pdf", content: "API documentation endpoints for local & remote inference."),
+                ContextFile(workspaceId: defaultWsId, name: "requirements.txt", sizeText: "0.8 KB", isInContext: false, fileType: "txt", content: "Dependencies: SwiftUI, Combine, URLSession.")
             ]
             isNewContextFiles = true
         }
         
-        // 3. Initialize Chat Messages (All stored properties are now fully initialized!)
-        self.chatMessages = storage.loadChatMessages()
+        // 3. Initialize Chat Messages
+        self.allChatMessages = storage.loadChatMessages()
         
         // Phase 2: Save defaults to storage if newly created
         if isNewWorkspaces {
             storage.saveWorkspaces(self.workspaces)
         }
         if isNewContextFiles {
-            storage.saveContextFiles(self.contextFiles)
+            storage.saveContextFiles(self.allContextFiles)
         }
         
         // Initial Ollama Auto-Discovery
@@ -120,7 +139,7 @@ public final class WorkspaceStore: ObservableObject {
     
     public var activeFilesCountText: String {
         let activeCount = contextFiles.filter { $0.isInContext }.count
-        return "\(activeCount) of \(contextFiles.count) files in context"
+        return String(format: loc("files_in_context"), activeCount, contextFiles.count)
     }
     
     public var wordCount: Int {
@@ -145,6 +164,7 @@ public final class WorkspaceStore: ObservableObject {
     }
     
     public func selectWorkspace(_ workspace: Workspace) {
+        objectWillChange.send()
         for index in workspaces.indices {
             workspaces[index].isActive = (workspaces[index].id == workspace.id)
         }
@@ -153,6 +173,7 @@ public final class WorkspaceStore: ObservableObject {
     }
     
     public func addWorkspace(name: String) {
+        objectWillChange.send()
         let newWs = Workspace(name: name.isEmpty ? "New Workspace" : name, isActive: true)
         for index in workspaces.indices {
             workspaces[index].isActive = false
@@ -163,17 +184,19 @@ public final class WorkspaceStore: ObservableObject {
     }
     
     public func toggleContextFile(_ file: ContextFile) {
-        if let index = contextFiles.firstIndex(where: { $0.id == file.id }) {
-            contextFiles[index].isInContext.toggle()
-            StorageService.shared.saveContextFiles(contextFiles)
+        objectWillChange.send()
+        if let index = allContextFiles.firstIndex(where: { $0.id == file.id }) {
+            allContextFiles[index].isInContext.toggle()
+            StorageService.shared.saveContextFiles(allContextFiles)
         }
     }
     
     public func addCustomContextFile(name: String, content: String) {
+        objectWillChange.send()
         let sizeText = "\(Double(content.count) / 1024.0 < 0.1 ? 0.1 : Double(content.count) / 1024.0) KB"
-        let newFile = ContextFile(name: name, sizeText: sizeText, isInContext: true, fileType: "txt", content: content)
-        contextFiles.append(newFile)
-        StorageService.shared.saveContextFiles(contextFiles)
+        let newFile = ContextFile(workspaceId: activeWorkspaceId, name: name, sizeText: sizeText, isInContext: true, fileType: "txt", content: content)
+        allContextFiles.append(newFile)
+        StorageService.shared.saveContextFiles(allContextFiles)
     }
     
     public func checkOllamaConnection() async {
@@ -202,23 +225,28 @@ public final class WorkspaceStore: ObservableObject {
         let promptText = inputPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !promptText.isEmpty, !isGenerating else { return }
         
-        let userMessage = ChatMessage(role: .user, content: promptText)
-        chatMessages.append(userMessage)
-        StorageService.shared.saveChatMessages(chatMessages)
+        objectWillChange.send()
+        let currentWorkspaceId = activeWorkspaceId
+        let userMessage = ChatMessage(workspaceId: currentWorkspaceId, role: .user, content: promptText)
+        allChatMessages.append(userMessage)
+        StorageService.shared.saveChatMessages(allChatMessages)
         
         inputPrompt = ""
         isGenerating = true
         
         let assistantMessageId = UUID()
-        let initialAssistantMsg = ChatMessage(id: assistantMessageId, role: .assistant, content: "", modelName: selectedModel.name)
-        chatMessages.append(initialAssistantMsg)
+        let initialAssistantMsg = ChatMessage(id: assistantMessageId, workspaceId: currentWorkspaceId, role: .assistant, content: "", modelName: selectedModel.name)
+        allChatMessages.append(initialAssistantMsg)
+        
+        let activeContextFiles = self.contextFiles
+        let activeMessages = self.chatMessages
         
         Task {
             let stream = LLMService.shared.streamCompletion(
                 model: selectedModel,
                 prompt: promptText,
-                messages: Array(chatMessages.dropLast()),
-                contextFiles: contextFiles,
+                messages: Array(activeMessages.dropLast()),
+                contextFiles: activeContextFiles,
                 parameters: parameters,
                 ollamaHost: ollamaHost,
                 openAIKey: openAIKey,
@@ -229,23 +257,30 @@ public final class WorkspaceStore: ObservableObject {
             
             do {
                 for try await chunk in stream {
-                    if let index = chatMessages.firstIndex(where: { $0.id == assistantMessageId }) {
-                        chatMessages[index].content += chunk
+                    if let index = allChatMessages.firstIndex(where: { $0.id == assistantMessageId }) {
+                        allChatMessages[index].content += chunk
                     }
                 }
             } catch {
-                if let index = chatMessages.firstIndex(where: { $0.id == assistantMessageId }) {
-                    chatMessages[index].content += "\n[Error: \(error.localizedDescription)]"
+                if let index = allChatMessages.firstIndex(where: { $0.id == assistantMessageId }) {
+                    allChatMessages[index].content += "\n[Error: \(error.localizedDescription)]"
                 }
             }
-            StorageService.shared.saveChatMessages(chatMessages)
+            StorageService.shared.saveChatMessages(allChatMessages)
             isGenerating = false
         }
     }
     
     public func clearChatHistory() {
-        chatMessages.removeAll()
-        StorageService.shared.saveChatMessages([])
+        objectWillChange.send()
+        let currentWorkspaceId = activeWorkspaceId
+        allChatMessages.removeAll { msg in
+            if let wId = msg.workspaceId {
+                return wId == currentWorkspaceId
+            }
+            return currentWorkspaceId == workspaces.first?.id
+        }
+        StorageService.shared.saveChatMessages(allChatMessages)
     }
     
     public func loc(_ key: String) -> String {
