@@ -121,11 +121,7 @@ public final class LLMService {
                         }
                     }
                 } catch {
-                    if model.provider == .ollama {
-                        try? await streamOllamaError(host: ollamaHost, continuation: continuation)
-                    } else {
-                        try? await streamSimulated(model: model, prompt: prompt, contextFiles: contextFiles, continuation: continuation)
-                    }
+                    try? await streamSimulated(model: model, prompt: prompt, contextFiles: contextFiles, continuation: continuation)
                 }
             }
         }
