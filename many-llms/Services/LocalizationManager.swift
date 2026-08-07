@@ -2,28 +2,26 @@
 //  LocalizationManager.swift
 //  many-llms
 //
-//  Created by Antigravity on 8/5/26.
-//
 
 import Foundation
 
-public enum AppLanguage: String, CaseIterable, Identifiable, Codable {
+public enum AppLanguage: String, Codable, CaseIterable, Identifiable {
     case system = "system"
-    case spanish = "es"
-    case english = "en"
+    case es = "es"
+    case en = "en"
     
-    public var id: String { self.rawValue }
+    public var id: String { rawValue }
     
     public var displayName: String {
         switch self {
         case .system: return "Sistema (System)"
-        case .spanish: return "Español 🇪🇸"
-        case .english: return "English 🇺🇸"
+        case .es: return "Español 🇪🇸"
+        case .en: return "English 🇺🇸"
         }
     }
 }
 
-public final class LocalizationManager {
+public class LocalizationManager {
     public static let shared = LocalizationManager()
     
     private init() {}
@@ -67,8 +65,8 @@ public final class LocalizationManager {
         // Sidebar & Workspaces
         "section_workspaces": "Workspaces",
         "section_context_files": "Archivos de Contexto",
-        "btn_new_chat": "+ Nuevo chat",
-        "badge_active": "Active",
+        "btn_new_chat": "Nuevo chat",
+        "badge_active": "Activo",
         "badge_coming_soon": "Próximamente",
         "chats": "Chats",
         "workspaces_and_projects": "Workspaces & Proyectos",
@@ -109,7 +107,7 @@ public final class LocalizationManager {
         
         // Alerts & File Import
         "file_imported_title": "Archivo importado",
-        "file_imported_msg": "El archivo '%@' se ha añadido exitosamente al contexto de ManyLLM."
+        "file_imported_msg": "El archivo "%s" se ha añadido exitosamente al contexto de ManyLLM."
     ]
     
     private let englishDictionary: [String: String] = [
@@ -134,7 +132,7 @@ public final class LocalizationManager {
         // Sidebar & Workspaces
         "section_workspaces": "Workspaces",
         "section_context_files": "Context Files",
-        "btn_new_chat": "+ New chat",
+        "btn_new_chat": "New chat",
         "badge_active": "Active",
         "badge_coming_soon": "Coming Soon",
         "chats": "Chats",
@@ -163,19 +161,19 @@ public final class LocalizationManager {
         "system_prompt": "System Prompt",
         
         // Privacy Consent
-        "privacy_title": "Data Usage & Privacy",
-        "privacy_subtitle": "To process your AI queries, ManyLLM connects with external natural language processing services.",
+        "privacy_title": "Data Usage and Privacy",
+        "privacy_subtitle": "To process your requests with artificial intelligence, ManyLLM connects to natural language processing services.",
         "privacy_what_data_title": "What information is transmitted?",
-        "privacy_what_data_body": "Only the text messages you write and the context files you explicitly select are transmitted to the chosen AI model to generate responses.",
+        "privacy_what_data_body": "Only the chat messages you type and context files you explicitly select are sent to the chosen AI model to generate responses.",
         "privacy_who_data_title": "Who receives your data?",
-        "privacy_who_data_body": "Data is sent directly to the provider of the configured model (such as OpenAI, Anthropic, Hugging Face, or your local Ollama server). ManyLLM has no intermediary servers and does not collect, store, or track your data on external databases.",
+        "privacy_who_data_body": "Data is sent directly to the configured provider (such as OpenAI, Anthropic, Hugging Face, or your local Ollama server). ManyLLM has no intermediary servers and does not collect, store, or track your data.",
         "privacy_security_title": "Local Security",
-        "privacy_security_body": "Your API Keys and personal settings are securely stored locally on your device (using iOS Keychain and UserDefaults).",
+        "privacy_security_body": "Your API Keys and personal configurations are stored locally and securely on your device (using Keychain and iOS UserDefaults).",
         "privacy_link": "Read Full Privacy Policy",
-        "privacy_accept": "I Understand & Accept",
+        "privacy_accept": "I Understand and Accept",
         
         // Alerts & File Import
         "file_imported_title": "File Imported",
-        "file_imported_msg": "File '%@' has been successfully added to ManyLLM's context."
+        "file_imported_msg": "The file "%s" was successfully added to ManyLLM context."
     ]
 }

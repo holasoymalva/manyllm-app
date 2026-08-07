@@ -10,8 +10,9 @@ public struct ManyLLMDrawerSidebarView: View {
     @Binding var isDrawerOpen: Bool
     @State private var showingNewWorkspaceAlert = false
     @State private var newWorkspaceName = ""
-    @State private var showingComingSoonAlert = false
-    @State private var comingSoonFeatureName = ""
+    @State private var showingAddFileAlert = false
+    @State private var newFileName = ""
+    @State private var newFileContent = ""
     
     public init(store: WorkspaceStore, isDrawerOpen: Binding<Bool>) {
         self.store = store
@@ -20,82 +21,79 @@ public struct ManyLLMDrawerSidebarView: View {
     
     public var body: some View {
         VStack(spacing: 0) {
-            // Top Drawer Header
-            HStack {
-                Text("ManyLLM")
-                    .font(.system(size: 24, weight: .semibold, design: .serif))
-                    .foregroundColor(.primary)
+            // Header
+            HStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "cpu")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.blue)
+                    Text("ManyLLM")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.primary)
+                }
                 
                 Spacer()
                 
                 Button(action: {
                     store.isSettingsPresented = true
                 }) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 16))
-                        .foregroundColor(.primary)
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.secondary)
                         .padding(8)
-                        .background(Color.gray.opacity(0.1))
+                        .background(Color.gray.opacity(0.12))
                         .clipShape(Circle())
                 }
                 
                 Button(action: {
-                    withAnimation(.easeInOut(duration: 0.25)) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
                         isDrawerOpen = false
                     }
                 }) {
-                    Image(systemName: "sidebar.leading")
-                        .font(.system(size: 16))
-                        .foregroundColor(.primary)
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.secondary)
                         .padding(8)
-                        .background(Color.gray.opacity(0.1))
+                        .background(Color.gray.opacity(0.12))
                         .clipShape(Circle())
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 18)
             .padding(.top, 16)
-            .padding(.bottom, 12)
+            .padding(.bottom, 14)
             
-            // Scrollable Menu Content
+            Divider()
+            
+            // Content List
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Category Links
-                    VStack(alignment: .leading, spacing: 14) {
-                        Button(action: {
-                            withAnimation { isDrawerOpen = false }
-                        }) {
-                            DrawerCategoryRow(icon: "bubble.left.and.bubble.right", title: store.loc("chats"), isAvailable: true, store: store)
-                        }
-                        
-                        Button(action: {
-                            withAnimation { isDrawerOpen = false }
-                        }) {
-                            DrawerCategoryRow(icon: "folder", title: store.loc("workspaces_and_projects"), isAvailable: true, store: store)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    
-                    Divider().padding(.horizontal, 20)
-                    
-                    // Section: Workspaces
+                VStack(alignment: .leading, spacing: 22) {
+                    // Section: Workspaces / Projects
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text(store.loc("section_workspaces"))
-                                .font(.caption)
-                                .fontWeight(.semibold)
+                            Text(store.loc("section_workspaces").uppercased())
+                                .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(.secondary)
+                            
                             Spacer()
+                            
                             Button(action: {
                                 newWorkspaceName = ""
                                 showingNewWorkspaceAlert = true
                             }) {
-                                Image(systemName: "plus")
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.primary)
+                                HStack(spacing: 4) {
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 11, weight: .bold))
+                                    Text(store.appLanguage == .en ? "New" : "Nuevo")
+                                        .font(.system(size: 12, weight: .semibold))
+                                }
+                                .foregroundColor(.blue)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(6)
                             }
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 18)
                         
                         VStack(spacing: 4) {
                             ForEach(store.workspaces) { ws in
@@ -103,98 +101,134 @@ public struct ManyLLMDrawerSidebarView: View {
                                     store.selectWorkspace(ws)
                                     withAnimation { isDrawerOpen = false }
                                 }) {
-                                    HStack {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: ws.isActive ? "folder.fill" : "folder")
+                                            .font(.system(size: 16))
+                                            .foregroundColor(ws.isActive ? .blue : .secondary)
+                                        
                                         Text(ws.name)
-                                            .font(.subheadline)
+                                            .font(.system(size: 15, weight: ws.isActive ? .semibold : .regular))
                                             .foregroundColor(.primary)
-                                        Image(systemName: "folder")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .lineLimit(1)
+                                        
                                         Spacer()
+                                        
                                         if ws.isActive {
                                             Text(store.loc("badge_active"))
-                                                .font(.caption2)
-                                                .fontWeight(.bold)
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 2)
-                                                .background(Color.blue.opacity(0.15))
-                                                .foregroundColor(.blue)
-                                                .cornerRadius(4)
+                                                .font(.system(size: 10, weight: .bold))
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 3)
+                                                .background(Color.blue)
+                                                .foregroundColor(.white)
+                                                .cornerRadius(10)
                                         }
                                     }
                                     .padding(.horizontal, 14)
-                                    .padding(.vertical, 8)
-                                    .background(ws.isActive ? Color.gray.opacity(0.12) : Color.clear)
-                                    .cornerRadius(8)
+                                    .padding(.vertical, 10)
+                                    .background(ws.isActive ? Color.blue.opacity(0.1) : Color.clear)
+                                    .cornerRadius(10)
                                 }
                             }
                         }
-                        .padding(.horizontal, 12)
+                        .padding(.horizontal, 10)
                     }
                     
-                    Divider().padding(.horizontal, 20)
+                    Divider().padding(.horizontal, 18)
                     
                     // Section: Archivos de Contexto
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(store.loc("section_context_files"))
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 20)
+                        HStack {
+                            Text(store.loc("section_context_files").uppercased())
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(.secondary)
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                newFileName = ""
+                                newFileContent = ""
+                                showingAddFileAlert = true
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "doc.badge.plus")
+                                        .font(.system(size: 12, weight: .bold))
+                                    Text(store.appLanguage == .en ? "Add" : "Agregar")
+                                        .font(.system(size: 12, weight: .semibold))
+                                }
+                                .foregroundColor(.blue)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(6)
+                            }
+                        }
+                        .padding(.horizontal, 18)
                         
                         VStack(spacing: 6) {
                             ForEach(store.contextFiles) { file in
-                                HStack {
-                                    Image(systemName: "doc.text")
-                                        .foregroundColor(.secondary)
+                                HStack(spacing: 12) {
+                                    Image(systemName: file.fileType == "pdf" ? "doc.richtext" : "doc.text")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(file.isInContext ? .blue : .secondary)
+                                    
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(file.name)
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundColor(.primary)
+                                            .lineLimit(1)
                                         Text(file.sizeText)
-                                            .font(.caption2)
+                                            .font(.system(size: 11))
                                             .foregroundColor(.secondary)
                                     }
+                                    
                                     Spacer()
+                                    
                                     Button(action: {
                                         store.toggleContextFile(file)
                                     }) {
                                         Image(systemName: file.isInContext ? "eye.fill" : "eye.slash")
-                                            .font(.caption)
-                                            .foregroundColor(file.isInContext ? .blue : .gray)
+                                            .font(.system(size: 14))
+                                            .foregroundColor(file.isInContext ? .blue : Color.gray.opacity(0.6))
+                                            .padding(6)
                                     }
                                 }
                                 .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
-                                .background(Color.gray.opacity(0.06))
-                                .cornerRadius(8)
+                                .padding(.vertical, 9)
+                                .background(Color(UIColor.secondarySystemGroupedBackground))
+                                .cornerRadius(10)
                             }
                         }
-                        .padding(.horizontal, 12)
+                        .padding(.horizontal, 10)
                         
                         Text(store.activeFilesCountText)
-                            .font(.caption2)
+                            .font(.system(size: 11))
                             .foregroundColor(.secondary)
-                            .padding(.horizontal, 20)
+                            .padding(.horizontal, 18)
                     }
                 }
-                .padding(.vertical, 12)
+                .padding(.vertical, 16)
             }
             
-            Spacer()
+            Divider()
             
-            // Bottom Sticky Bar (User Avatar + New Chat Floating Button)
-            HStack {
-                // Profile Avatar Button (opens Settings)
+            // Bottom Sticky Bar (Profile Avatar + New Chat Floating Button)
+            HStack(spacing: 12) {
+                // Settings Profile Avatar
                 Button(action: {
                     store.isSettingsPresented = true
                 }) {
-                    Text("ML")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.primary)
-                        .frame(width: 44, height: 44)
-                        .background(Color.gray.opacity(0.18))
-                        .clipShape(Circle())
+                    HStack(spacing: 8) {
+                        Text("ML")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.primary)
+                            .frame(width: 36, height: 36)
+                            .background(Color.gray.opacity(0.18))
+                            .clipShape(Circle())
+                        
+                        Text(store.loc("settings_title"))
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
                 }
                 
                 Spacer()
@@ -207,19 +241,19 @@ public struct ManyLLMDrawerSidebarView: View {
                 }) {
                     HStack(spacing: 6) {
                         Image(systemName: "plus")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 13, weight: .bold))
                         Text(store.loc("btn_new_chat"))
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 14, weight: .semibold))
                     }
                     .foregroundColor(.white)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
                     .background(Color.black)
-                    .cornerRadius(24)
+                    .cornerRadius(20)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
             .background(Color(UIColor.systemBackground))
         }
         .frame(maxWidth: 320)
@@ -231,42 +265,14 @@ public struct ManyLLMDrawerSidebarView: View {
                 store.addWorkspace(name: newWorkspaceName)
             }
         }
-        .alert("Info", isPresented: $showingComingSoonAlert) {
-            Button(store.loc("ok"), role: .cancel) { }
-        } message: {
-            Text("\(comingSoonFeatureName)")
-        }
-    }
-}
-
-struct DrawerCategoryRow: View {
-    let icon: String
-    let title: String
-    var isAvailable: Bool = true
-    var store: WorkspaceStore? = nil
-    
-    var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
-                .foregroundColor(.primary)
-                .frame(width: 20)
-            
-            Text(title)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.primary)
-            
-            Spacer()
-            
-            if !isAvailable {
-                Text(store?.loc("badge_coming_soon") ?? "Próximamente")
-                    .font(.caption2)
-                    .fontWeight(.bold)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.orange.opacity(0.15))
-                    .foregroundColor(.orange)
-                    .cornerRadius(4)
+        .alert("Agregar Archivo de Contexto", isPresented: $showingAddFileAlert) {
+            TextField("Nombre del archivo (ej. notas.txt)", text: $newFileName)
+            TextField("Contenido del archivo", text: $newFileContent)
+            Button(store.loc("cancel"), role: .cancel) { }
+            Button("Agregar") {
+                if !newFileName.isEmpty {
+                    store.addCustomContextFile(name: newFileName, content: newFileContent)
+                }
             }
         }
     }
